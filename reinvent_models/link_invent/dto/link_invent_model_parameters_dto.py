@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
-from reinvent_models.link_invent.model_vocabulary.paired_model_vocabulary import PairedModelVocabulary
+from reinvent_models.link_invent.model_vocabulary.paired_model_vocabulary import (
+    PairedModelVocabulary,
+)
 
 
 @dataclass

@@ -6,7 +6,9 @@ import torch.utils.data as tud
 from torch import Tensor
 from torch.nn.utils.rnn import pad_sequence
 
-from reinvent_models.link_invent.model_vocabulary.model_vocabulary import ModelVocabulary
+from reinvent_models.link_invent.model_vocabulary.model_vocabulary import (
+    ModelVocabulary,
+)
 
 
 class Dataset(tud.Dataset):
@@ -32,7 +34,9 @@ class Dataset(tud.Dataset):
                 # TODO log theses cases
 
     def __getitem__(self, i):
-        return torch.tensor(self._encoded_list[i], dtype=torch.long)  # pylint: disable=E1102
+        return torch.tensor(
+            self._encoded_list[i], dtype=torch.long
+        )  # pylint: disable=E1102
 
     def __len__(self):
         return len(self._encoded_list)
@@ -48,8 +52,9 @@ class Dataset(tud.Dataset):
         :param encoded_seqs: A list of encoded sequences.
         :return: A tensor with the sequences correctly padded.
         """
-        seq_lengths = torch.tensor([len(seq) for seq in encoded_seqs], dtype=torch.int64)
-        return pad_sequence(encoded_seqs, batch_first=True).cuda(), seq_lengths
-
-
-
+        seq_lengths = torch.tensor(
+            [len(seq) for seq in encoded_seqs], dtype=torch.int64
+        )
+        if torch.cuda.is_available:
+            return pad_sequence(encoded_seqs, batch_first=True).cuda(), seq_lengths
+        return pad_sequence(encoded_seqs, batch_first=True), seq_lengths

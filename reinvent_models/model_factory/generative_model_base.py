@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 
 class GenerativeModelBase(ABC):
-
     @abstractmethod
     def save_to_file(self, path_to_file: str):
         raise NotImplementedError("save_to_file method is not implemented")

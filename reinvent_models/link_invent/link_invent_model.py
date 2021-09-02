@@ -7,15 +7,23 @@ from torch import nn as tnn
 
 from reinvent_models.link_invent.dto import LinkInventModelParameterDTO
 from reinvent_models.link_invent.dto import SampledSequencesDTO
-from reinvent_models.link_invent.model_vocabulary.paired_model_vocabulary import PairedModelVocabulary
+from reinvent_models.link_invent.model_vocabulary.paired_model_vocabulary import (
+    PairedModelVocabulary,
+)
 from reinvent_models.model_factory.enums.model_mode_enum import ModelModeEnum
 from reinvent_models.model_factory.generative_model_base import GenerativeModelBase
 from reinvent_models.link_invent.networks import EncoderDecoder
 
 
 class LinkInventModel(GenerativeModelBase):
-    def __init__(self, vocabulary: PairedModelVocabulary, network: EncoderDecoder,
-                 max_sequence_length: int = 256, no_cuda: bool = False, mode: str = ModelModeEnum().TRAINING):
+    def __init__(
+        self,
+        vocabulary: PairedModelVocabulary,
+        network: EncoderDecoder,
+        max_sequence_length: int = 256,
+        no_cuda: bool = False,
+        mode: str = ModelModeEnum().TRAINING,
+    ):
         self.vocabulary = vocabulary
         self.network = network
         self.max_sequence_length = max_sequence_length
@@ -36,7 +44,9 @@ class LinkInventModel(GenerativeModelBase):
             raise ValueError(f"Invalid model mode '{mode}")
 
     @classmethod
-    def load_from_file(cls, path_to_file, mode: str = ModelModeEnum().TRAINING) -> Union[Any, GenerativeModelBase] :
+    def load_from_file(
+        cls, path_to_file, mode: str = ModelModeEnum().TRAINING
+    ) -> Union[Any, GenerativeModelBase]:
         """
         Loads a model from a single file
         :param path_to_file: Path to the saved model
@@ -46,8 +56,12 @@ class LinkInventModel(GenerativeModelBase):
         data = from_dict(LinkInventModelParameterDTO, torch.load(path_to_file))
         network = EncoderDecoder(**data.network_parameter)
         network.load_state_dict(data.network_state)
-        model = LinkInventModel(vocabulary=data.vocabulary, network=network,
-                                max_sequence_length=data.max_sequence_length, mode=mode)
+        model = LinkInventModel(
+            vocabulary=data.vocabulary,
+            network=network,
+            max_sequence_length=data.max_sequence_length,
+            mode=mode,
+        )
         return model
 
     def save_to_file(self, path_to_file):
@@ -55,12 +69,17 @@ class LinkInventModel(GenerativeModelBase):
         Saves the model to a file.
         :param path_to_file: Path to the file which the model will be saved to.
         """
-        data = LinkInventModelParameterDTO(vocabulary=self.vocabulary, max_sequence_length=self.max_sequence_length,
-                                           network_parameter=self.network.get_params(),
-                                           network_state=self.network.state_dict())
+        data = LinkInventModelParameterDTO(
+            vocabulary=self.vocabulary,
+            max_sequence_length=self.max_sequence_length,
+            network_parameter=self.network.get_params(),
+            network_state=self.network.state_dict(),
+        )
         torch.save(asdict(data), path_to_file)
 
-    def likelihood(self, warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths):
+    def likelihood(
+        self, warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths
+    ):
         """
         Retrieves the likelihood of warheads and their respective linker.
         :param warheads_seqs: (batch, seq) A batch of padded scaffold sequences.
@@ -71,8 +90,9 @@ class LinkInventModel(GenerativeModelBase):
         """
 
         # NOTE: the decoration_seq_lengths have a - 1 to prevent the end token to be forward-passed.
-        logits = self.network(warheads_seqs, warheads_seq_lengths, linker_seqs,
-                              linker_seq_lengths - 1)  # (batch, seq - 1, voc)
+        logits = self.network(
+            warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths - 1
+        )  # (batch, seq - 1, voc)
         log_probs = logits.log_softmax(dim=2).transpose(1, 2)  # (batch, voc, seq - 1)
         return self._nll_loss(log_probs, linker_seqs[:, 1:]).sum(dim=1)  # (batch)
 
@@ -86,30 +106,51 @@ class LinkInventModel(GenerativeModelBase):
         """
         batch_size = inputs.size(0)
 
-        input_vector = torch.full((batch_size, 1), self.vocabulary.target.vocabulary["^"],
-                                  dtype=torch.long).cuda()  # (batch, 1)
+        input_vector = torch.full(
+            (batch_size, 1), self.vocabulary.target.vocabulary["^"], dtype=torch.long
+        )  # (batch, 1)
         seq_lengths = torch.ones(batch_size)  # (batch)
-        encoder_padded_seqs, hidden_states = self.network.forward_encoder(inputs, input_seq_lengths)
-        nlls = torch.zeros(batch_size).cuda()
-        not_finished = torch.ones(batch_size, 1, dtype=torch.long).cuda()
+        encoder_padded_seqs, hidden_states = self.network.forward_encoder(
+            inputs, input_seq_lengths
+        )
+        nlls = torch.zeros(batch_size)
+        not_finished = torch.ones(batch_size, 1, dtype=torch.long)
+        if torch.cuda.is_available:
+            input_vector = input_vector.cuda()
+            nlls = nlls.cuda()
+            input_vector = input_vector.cuda()
         sequences = []
         for _ in range(self.max_sequence_length - 1):
             logits, hidden_states, _ = self.network.forward_decoder(
-                input_vector, seq_lengths, encoder_padded_seqs, hidden_states)  # (batch, 1, voc)
+                input_vector, seq_lengths, encoder_padded_seqs, hidden_states
+            )  # (batch, 1, voc)
             probs = logits.softmax(dim=2).squeeze()  # (batch, voc)
             log_probs = logits.log_softmax(dim=2).squeeze()  # (batch, voc)
             input_vector = torch.multinomial(probs, 1) * not_finished  # (batch, 1)
             sequences.append(input_vector)
             nlls += self._nll_loss(log_probs, input_vector.squeeze())
-            not_finished = (input_vector > 1).type(torch.long)  # 0 is padding, 1 is end token
+            not_finished = (input_vector > 1).type(
+                torch.long
+            )  # 0 is padding, 1 is end token
             if not_finished.sum() == 0:
                 break
 
-        linker_smiles_list = [self.vocabulary.target.decode(seq) for seq in torch.cat(sequences, 1).data.cpu().numpy()]
-        warheads_smiles_list = [self.vocabulary.input.decode(seq) for seq in inputs.data.cpu().numpy()]
+        linker_smiles_list = [
+            self.vocabulary.target.decode(seq)
+            for seq in torch.cat(sequences, 1).data.cpu().numpy()
+        ]
+        warheads_smiles_list = [
+            self.vocabulary.input.decode(seq) for seq in inputs.data.cpu().numpy()
+        ]
 
-        result = [SampledSequencesDTO(warheads, linker, nll) for warheads, linker, nll in
-                  zip(warheads_smiles_list, linker_smiles_list, nlls.data.cpu().numpy().tolist())]
+        result = [
+            SampledSequencesDTO(warheads, linker, nll)
+            for warheads, linker, nll in zip(
+                warheads_smiles_list,
+                linker_smiles_list,
+                nlls.data.cpu().numpy().tolist(),
+            )
+        ]
         return result
 
     def get_network_parameters(self):

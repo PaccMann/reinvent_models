@@ -137,7 +137,7 @@ class SMILESTokenizer:
     REGEXPS = {
         "brackets": re.compile(r"(\[[^\]]*\])"),
         "2_ring_nums": re.compile(r"(%\d{2})"),
-        "brcl": re.compile(r"(Br|Cl)")
+        "brcl": re.compile(r"(Br|Cl)"),
     }
     REGEXP_ORDER = ["brackets", "2_ring_nums", "brcl"]
 
@@ -148,6 +148,7 @@ class SMILESTokenizer:
         :param with_begin_and_end: Appends a begin token and prepends an end token.
         :return : A list with the tokenized version.
         """
+
         def split_by(smiles, regexps):
             if not regexps:
                 return list(smiles)

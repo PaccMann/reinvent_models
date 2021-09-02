@@ -4,7 +4,6 @@ from reinvent_models.model_factory.generative_model_base import GenerativeModelB
 
 
 class LinkInventAdapter(GenerativeModelBase):
-
     def __init__(self, path_to_file: str, mode: str):
         self.generative_model = LinkInventModel.load_from_file(path_to_file, mode)
         self.vocabulary = self.generative_model.vocabulary
@@ -14,8 +13,12 @@ class LinkInventAdapter(GenerativeModelBase):
     def save_to_file(self, path):
         self.generative_model.save_to_file(path)
 
-    def likelihood(self, warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths):
-        return self.generative_model.likelihood(warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths)
+    def likelihood(
+        self, warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths
+    ):
+        return self.generative_model.likelihood(
+            warheads_seqs, warheads_seq_lengths, linker_seqs, linker_seq_lengths
+        )
 
     def sample(self, warheads_seqs, warheads_seq_lengths):
         return self.generative_model.sample(warheads_seqs, warheads_seq_lengths)

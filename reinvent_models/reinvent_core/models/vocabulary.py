@@ -84,12 +84,13 @@ class SMILESTokenizer:
     REGEXPS = {
         "brackets": re.compile(r"(\[[^\]]*\])"),
         "2_ring_nums": re.compile(r"(%\d{2})"),
-        "brcl": re.compile(r"(Br|Cl)")
+        "brcl": re.compile(r"(Br|Cl)"),
     }
     REGEXP_ORDER = ["brackets", "2_ring_nums", "brcl"]
 
     def tokenize(self, data, with_begin_and_end=True):
         """Tokenizes a SMILES string."""
+
         def split_by(data, regexps):
             if not regexps:
                 return list(data)
@@ -126,5 +127,7 @@ def create_vocabulary(smiles_list, tokenizer):
         tokens.update(tokenizer.tokenize(smi, with_begin_and_end=False))
 
     vocabulary = Vocabulary()
-    vocabulary.update(["$", "^"] + sorted(tokens))  # end token is 0 (also counts as padding)
+    vocabulary.update(
+        ["$", "^"] + sorted(tokens)
+    )  # end token is 0 (also counts as padding)
     return vocabulary

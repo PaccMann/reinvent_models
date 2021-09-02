@@ -1,4 +1,3 @@
-
 """
 Implementation of the RNN model
 """
@@ -9,6 +8,7 @@ import torch.nn as tnn
 import torch.nn.functional as tnnf
 
 from reinvent_models.reinvent_core.models import vocabulary as mv
+
 # from models import vocabulary as mv
 
 
@@ -18,8 +18,16 @@ class RNN(tnn.Module):
     and an output linear layer back to the size of the vocabulary
     """
 
-    def __init__(self, voc_size, layer_size=512, num_layers=3, cell_type='gru', embedding_layer_size=256, dropout=0.,
-                 layer_normalization=False):
+    def __init__(
+        self,
+        voc_size,
+        layer_size=512,
+        num_layers=3,
+        cell_type="gru",
+        embedding_layer_size=256,
+        dropout=0.0,
+        layer_normalization=False,
+    ):
         """
         Implements a N layer GRU|LSTM cell including an embedding layer and an output linear layer back to the size of the
         vocabulary
@@ -38,14 +46,26 @@ class RNN(tnn.Module):
         self._layer_normalization = layer_normalization
 
         self._embedding = tnn.Embedding(voc_size, self._embedding_layer_size)
-        if self._cell_type == 'gru':
-            self._rnn = tnn.GRU(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
-                                dropout=self._dropout, batch_first=True)
-        elif self._cell_type == 'lstm':
-            self._rnn = tnn.LSTM(self._embedding_layer_size, self._layer_size, num_layers=self._num_layers,
-                                 dropout=self._dropout, batch_first=True)
+        if self._cell_type == "gru":
+            self._rnn = tnn.GRU(
+                self._embedding_layer_size,
+                self._layer_size,
+                num_layers=self._num_layers,
+                dropout=self._dropout,
+                batch_first=True,
+            )
+        elif self._cell_type == "lstm":
+            self._rnn = tnn.LSTM(
+                self._embedding_layer_size,
+                self._layer_size,
+                num_layers=self._num_layers,
+                dropout=self._dropout,
+                batch_first=True,
+            )
         else:
-            raise ValueError('Value of the parameter cell_type should be "gru" or "lstm"')
+            raise ValueError(
+                'Value of the parameter cell_type should be "gru" or "lstm"'
+            )
         self._linear = tnn.Linear(self._layer_size, voc_size)
 
     def forward(self, input_vector, hidden_state=None):  # pylint: disable=W0221
@@ -77,11 +97,11 @@ class RNN(tnn.Module):
         Returns the configuration parameters of the model.
         """
         return {
-            'dropout': self._dropout,
-            'layer_size': self._layer_size,
-            'num_layers': self._num_layers,
-            'cell_type': self._cell_type,
-            'embedding_layer_size': self._embedding_layer_size
+            "dropout": self._dropout,
+            "layer_size": self._layer_size,
+            "num_layers": self._num_layers,
+            "cell_type": self._cell_type,
+            "embedding_layer_size": self._embedding_layer_size,
         }
 
 
@@ -90,8 +110,14 @@ class Model:
     Implements an RNN model using SMILES.
     """
 
-    def __init__(self, vocabulary: mv.Vocabulary, tokenizer, network_params=None, max_sequence_length=256,
-                 no_cuda=False):
+    def __init__(
+        self,
+        vocabulary: mv.Vocabulary,
+        tokenizer,
+        network_params=None,
+        max_sequence_length=256,
+        no_cuda=False,
+    ):
         """
         Implements an RNN.
         :param vocabulary: Vocabulary to use.
@@ -126,10 +152,10 @@ class Model:
 
         network_params = save_dict.get("network_params", {})
         model = Model(
-            vocabulary=save_dict['vocabulary'],
-            tokenizer=save_dict.get('tokenizer', mv.SMILESTokenizer()),
+            vocabulary=save_dict["vocabulary"],
+            tokenizer=save_dict.get("tokenizer", mv.SMILESTokenizer()),
             network_params=network_params,
-            max_sequence_length=save_dict['max_sequence_length']
+            max_sequence_length=save_dict["max_sequence_length"],
         )
         model.network.load_state_dict(save_dict["network"])
         if sampling_mode:
@@ -142,11 +168,11 @@ class Model:
         :param file: it's actually a path
         """
         save_dict = {
-            'vocabulary': self.vocabulary,
-            'tokenizer': self.tokenizer,
-            'max_sequence_length': self.max_sequence_length,
-            'network': self.network.state_dict(),
-            'network_params': self.network.get_params()
+            "vocabulary": self.vocabulary,
+            "tokenizer": self.tokenizer,
+            "max_sequence_length": self.max_sequence_length,
+            "network": self.network.state_dict(),
+            "network_params": self.network.get_params(),
         }
         torch.save(save_dict, file)
 
@@ -158,9 +184,11 @@ class Model:
         def collate_fn(encoded_seqs):
             """Function to take a list of encoded sequences and turn them into a batch"""
             max_length = max([seq.size(0) for seq in encoded_seqs])
-            collated_arr = torch.zeros(len(encoded_seqs), max_length, dtype=torch.long)  # padded with zeroes
+            collated_arr = torch.zeros(
+                len(encoded_seqs), max_length, dtype=torch.long
+            )  # padded with zeroes
             for i, seq in enumerate(encoded_seqs):
-                collated_arr[i, :seq.size(0)] = seq
+                collated_arr[i, : seq.size(0)] = seq
             return collated_arr
 
         padded_sequences = collate_fn(sequences)
@@ -186,7 +214,9 @@ class Model:
             :smiles: (n) A list with SMILES.
             :likelihoods: (n) A list of likelihoods.
         """
-        batch_sizes = [batch_size for _ in range(num // batch_size)] + [num % batch_size]
+        batch_sizes = [batch_size for _ in range(num // batch_size)] + [
+            num % batch_size
+        ]
         smiles_sampled = []
         likelihoods_sampled = []
 
@@ -194,7 +224,10 @@ class Model:
             if not size:
                 break
             seqs, likelihoods = self._sample(batch_size=size)
-            smiles = [self.tokenizer.untokenize(self.vocabulary.decode(seq)) for seq in seqs.cpu().numpy()]
+            smiles = [
+                self.tokenizer.untokenize(self.vocabulary.decode(seq))
+                for seq in seqs.cpu().numpy()
+            ]
 
             smiles_sampled.extend(smiles)
             likelihoods_sampled.append(likelihoods.data.cpu().numpy())
@@ -202,9 +235,14 @@ class Model:
             del seqs, likelihoods
         return smiles_sampled, np.concatenate(likelihoods_sampled)
 
-    def sample_sequences_and_smiles(self, batch_size=128) -> Tuple[torch.Tensor, List, torch.Tensor]:
+    def sample_sequences_and_smiles(
+        self, batch_size=128
+    ) -> Tuple[torch.Tensor, List, torch.Tensor]:
         seqs, likelihoods = self._sample(batch_size=batch_size)
-        smiles = [self.tokenizer.untokenize(self.vocabulary.decode(seq)) for seq in seqs.cpu().numpy()]
+        smiles = [
+            self.tokenizer.untokenize(self.vocabulary.decode(seq))
+            for seq in seqs.cpu().numpy()
+        ]
         return seqs, smiles, likelihoods
 
     # @torch.no_grad()
@@ -212,7 +250,9 @@ class Model:
         start_token = torch.zeros(batch_size, dtype=torch.long)
         start_token[:] = self.vocabulary["^"]
         input_vector = start_token
-        sequences = [self.vocabulary["^"] * torch.ones([batch_size, 1], dtype=torch.long)]
+        sequences = [
+            self.vocabulary["^"] * torch.ones([batch_size, 1], dtype=torch.long)
+        ]
         # NOTE: The first token never gets added in the loop so the sequences are initialized with a start token
         hidden_state = None
         nlls = torch.zeros(batch_size)

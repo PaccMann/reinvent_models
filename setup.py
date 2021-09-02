@@ -6,12 +6,11 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="reinvent_models",
     version="0.0.7",
-    author="MolecularAI",
-    author_email="patronov@gmail.com",
-    description="Generative models for Reinvent",
+    author="PaccMann Team",
+    description="Generative models for Reinvent adapted for PaccMann",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://bitbucket.astrazeneca.net/scm/com/reinvent_models.git",
+    url="https://github.com/PaccMann/reinvent_models",
     packages=setuptools.find_packages(exclude=("testing",)),
     classifiers=[
         "Programming Language :: Python :: 3",

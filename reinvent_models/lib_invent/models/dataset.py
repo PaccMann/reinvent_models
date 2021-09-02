@@ -27,7 +27,9 @@ class Dataset(tud.Dataset):
                 self._encoded_list.append(enc)
 
     def __getitem__(self, i):
-        return torch.tensor(self._encoded_list[i], dtype=torch.long)  # pylint: disable=E1102
+        return torch.tensor(
+            self._encoded_list[i], dtype=torch.long
+        )  # pylint: disable=E1102
 
     def __len__(self):
         return len(self._encoded_list)
@@ -45,14 +47,21 @@ class DecoratorDataset(tud.Dataset):
 
         self._encoded_list = []
         for scaffold, dec in scaffold_decoration_smi_list:
-            en_scaff = self.vocabulary.scaffold_vocabulary.encode(self.vocabulary.scaffold_tokenizer.tokenize(scaffold))
-            en_dec = self.vocabulary.decoration_vocabulary.encode(self.vocabulary.decoration_tokenizer.tokenize(dec))
+            en_scaff = self.vocabulary.scaffold_vocabulary.encode(
+                self.vocabulary.scaffold_tokenizer.tokenize(scaffold)
+            )
+            en_dec = self.vocabulary.decoration_vocabulary.encode(
+                self.vocabulary.decoration_tokenizer.tokenize(dec)
+            )
             if en_scaff is not None and en_dec is not None:
                 self._encoded_list.append((en_scaff, en_dec))
 
     def __getitem__(self, i):
         scaff, dec = self._encoded_list[i]
-        return (torch.tensor(scaff, dtype=torch.long), torch.tensor(dec, dtype=torch.long))  # pylint: disable=E1102
+        return (
+            torch.tensor(scaff, dtype=torch.long),
+            torch.tensor(dec, dtype=torch.long),
+        )  # pylint: disable=E1102
 
     def __len__(self):
         return len(self._encoded_list)
@@ -74,5 +83,7 @@ def pad_batch(encoded_seqs):
     :param encoded_seqs: A list of encoded sequences.
     :return: A tensor with the sequences correctly padded.
     """
-    seq_lengths = torch.tensor([len(seq) for seq in encoded_seqs], dtype=torch.int64)  # pylint: disable=not-callable
+    seq_lengths = torch.tensor(
+        [len(seq) for seq in encoded_seqs], dtype=torch.int64
+    )  # pylint: disable=not-callable
     return (tnnur.pad_sequence(encoded_seqs, batch_first=True).cuda(), seq_lengths)
