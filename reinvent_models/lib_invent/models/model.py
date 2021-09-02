@@ -138,7 +138,7 @@ class DecoratorModel:
         )
         nlls = torch.zeros(batch_size)
         not_finished = torch.ones(batch_size, 1, dtype=torch.long)
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             input_vector = input_vector.cuda()
             nlls = nlls.cuda()
             input_vector = input_vector.cuda()

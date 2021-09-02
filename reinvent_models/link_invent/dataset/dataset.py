@@ -55,6 +55,6 @@ class Dataset(tud.Dataset):
         seq_lengths = torch.tensor(
             [len(seq) for seq in encoded_seqs], dtype=torch.int64
         )
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             return pad_sequence(encoded_seqs, batch_first=True).cuda(), seq_lengths
         return pad_sequence(encoded_seqs, batch_first=True), seq_lengths

@@ -82,7 +82,7 @@ class Encoder(tnn.Module):
         return padded_seqs, (hs_h, hs_c)
 
     def _initialize_hidden_state(self, batch_size):
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             return torch.zeros(
                 self.num_layers * 2, batch_size, self.num_dimensions
             ).cuda()
