@@ -51,7 +51,10 @@ class DecoratorModel:
         :param mode: Mode in which the model should be initialized.
         :return: An instance of the RNN.
         """
-        data = torch.load(path)
+        if torch.cuda.is_available():
+            data = torch.load(path)
+        else:
+            data = torch.load(path, map_location=torch.device('cpu'))
 
         decorator = Decorator(**data["decorator"]["params"])
         decorator.load_state_dict(data["decorator"]["state"])
